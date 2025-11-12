@@ -1,0 +1,43 @@
+﻿% Adaptive Decision-Directed Equalizer (LMS) - MATLAB R2013 Compatible
+clc;
+clear;
+
+
+
+
+channel_length = 10;
+snr_db = 20;
+num_symbols = 1000;
+mu = 0.01;
+
+
+
+
+data_symbols = randi([0, 1], 1, num_symbols);
+modulated_symbols = 2*data_symbols - 1;
+channel = (randn(1, channel_length) + 1i*randn(1, channel_length)) / sqrt(2);
+received_symbols = filter(channel, 1, modulated_symbols);
+noise_power = 10^(-snr_db/10);
+noise = sqrt(noise_power/2) * (randn(1, length(received_symbols)) + 1i*randn(1, length(received_symbols)));
+received_symbols_noisy = received_symbols + noise;
+equalizer_length = channel_length;
+equalizer = zeros(1, equalizer_length);
+output_signal = zeros(1, length(received_symbols_noisy));
+
+
+
+
+for i = equalizer_length:length(received_symbols_noisy)
+    received_window = received_symbols_noisy(i:-1:i-equalizer_length+1);
+    output_signal(i) = equalizer * received_window.';
+    d = modulated_symbols(i);
+    err = d - output_signal(i);
+    equalizer = equalizer + mu * conj(err) * received_window;
+end
+
+
+
+
+demodulated_symbols = real(output_signal) > 0;
+ber = sum(data_symbols ~= demodulated_symbols) / num_symbols;
+fprintf('Bit Error Rate (BER): %.4f\n', ber);
