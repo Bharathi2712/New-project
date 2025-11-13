@@ -1,0 +1,136 @@
+﻿// ESP32 code for voltage & current simulation and MQTT publishing
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+const char* mqtt_server = "broker.hivemq.com";  // Public MQTT broker
+
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+
+void setup_wifi() {
+  delay(10);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+}
+
+
+void reconnect() {
+  while (!client.connected()) {
+    if (client.connect("ESP32Client")) {
+      client.subscribe("smartgrid/data");
+    } else {
+      delay(5000);
+    }
+  }
+}
+
+
+void setup() {
+  Serial.begin(115200);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+}
+
+
+void loop() {
+  if (!client.connected()) reconnect();
+  client.loop();
+
+
+  float voltage = random(210, 250);   // simulate voltage
+  float current = random(5, 15);      // simulate current
+  float power = voltage * current;
+
+
+  char payload[100];
+  sprintf(payload, "{\"voltage\":%.2f, \"current\":%.2f, \"power\":%.2f}", voltage, current, power);
+
+
+  client.publish("smartgrid/data", payload);
+  Serial.println(payload);
+
+
+  delay(5000); // every 5 sec
+}
+
+
+
+
+
+
+
+
+
+
+import paho.mqtt.client as mqtt
+import requests
+import json
+
+
+THINGSPEAK_API_KEY = "YOUR_THINGSPEAK_WRITE_API_KEY"
+
+
+def on_message(client, userdata, message):
+    data = json.loads(message.payload.decode())
+    voltage = data['voltage']
+    current = data['current']
+    power = data['power']
+    
+    url = f"https://api.thingspeak.com/update?api_key={THINGSPEAK_API_KEY}&field1={voltage}&field2={current}&field3={power}"
+    requests.get(url)
+    print("Data sent to ThingSpeak:", data)
+
+
+client = mqtt.Client()
+client.connect("broker.hivemq.com", 1883, 60)
+client.subscribe("smartgrid/data")
+client.on_message = on_message
+client.loop_forever()
+
+
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+
+
+# Load your ThingSpeak data CSV
+df = pd.read_csv("smartgrid_data.csv")
+
+
+X = df[['voltage', 'current']]
+y = df['power']
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+
+y_pred = model.predict(X_test)
+
+
+plt.plot(y_test.values[:50], label="Actual")
+plt.plot(y_pred[:50], label="Predicted")
+plt.legend()
+plt.title("AI-Based Power Forecasting")
+plt.show()
+
+
+# Save model
+import joblib
+joblib.dump(model, "power_forecast_model.pkl")
