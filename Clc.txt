@@ -1,0 +1,245 @@
+﻿clc;
+clear;
+close all;
+
+
+K = 10;
+Nt = 100;
+B = 20e6;
+Pt = 10;
+N0 = 1e-17;
+Pn = N0 * B;
+
+
+antenna_range = 20:20:300;
+avgSINR = zeros(size(antenna_range));
+
+
+for a = 1:length(antenna_range)
+
+
+    Nt = antenna_range(a);
+
+
+    H = (randn(K,Nt) + 1i*randn(K,Nt))/sqrt(2);
+
+
+    W = H' * inv(H*H');
+
+
+    W = W / norm(W,'fro') * sqrt(Pt);
+
+
+    Heff = H * W;
+
+
+    signal = abs(diag(Heff)).^2;
+
+
+    interference = sum(abs(Heff).^2,2) - signal;
+
+
+    SINR = signal ./ (interference + Pn);
+
+
+    avgSINR(a) = mean(SINR);
+
+
+end
+
+
+figure;
+
+
+plot(antenna_range,10*log10(avgSINR),'LineWidth',2);
+
+
+grid on;
+
+
+xlabel('Number of Antennas');
+
+
+ylabel('Average SINR (dB)');
+
+
+title('Single Cell Massive MIMO Downlink');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Full
+
+
+
+
+
+
+clc;
+clear;
+
+
+K = 10;
+N = 1e4;
+B = 20e6;
+N0 = 1e-17;
+
+
+Pn = N0 * B;
+
+
+antenna_range = 20:20:300;
+
+
+Pt = 10;
+
+
+avg_SINR_vs_Nt = zeros(size(antenna_range));
+
+
+for a = 1:length(antenna_range)
+
+
+    Nt = antenna_range(a);
+
+
+    SINR_all = zeros(K, N);
+
+
+    for iter = 1:N
+
+
+        H = (randn(K, Nt) + 1i*randn(K, Nt)) / sqrt(2);
+
+
+        W_zf = H' * inv(H * H');
+
+
+        W_zf = W_zf / norm(W_zf,'fro') * sqrt(Pt);
+
+
+        Heff = H * W_zf;
+
+
+        signal_power = abs(diag(Heff)).^2;
+
+
+        interference_power = sum(abs(Heff).^2,2) - signal_power;
+
+
+        SINR = signal_power ./ (interference_power + Pn);
+
+
+        SINR_all(:,iter) = SINR;
+
+
+    end
+
+
+    avg_SINR_vs_Nt(a) = mean(SINR_all(:));
+
+
+end
+
+
+figure;
+
+
+plot(antenna_range,10*log10(avg_SINR_vs_Nt),'LineWidth',2);
+
+
+grid on;
+
+
+xlabel('Number of Transmit Antennas (N_t)');
+
+
+ylabel('Average SINR (dB)');
+
+
+title('SINR vs Number of Antennas (ZF Massive MIMO)');
+
+
+Nt = 200;
+
+
+Pt_dB_range = 0:2:30;
+
+
+avg_throughput_vs_Pt = zeros(size(Pt_dB_range));
+
+
+for p = 1:length(Pt_dB_range)
+
+
+    Pt = 10^(Pt_dB_range(p)/10);
+
+
+    throughput_all = zeros(K, N);
+
+
+    for iter = 1:N
+
+
+        H = (randn(K, Nt) + 1i*randn(K, Nt)) / sqrt(2);
+
+
+        W_zf = H' * inv(H * H');
+
+
+        W_zf = W_zf / norm(W_zf,'fro') * sqrt(Pt);
+
+
+        Heff = H * W_zf;
+
+
+        signal_power = abs(diag(Heff)).^2;
+
+
+        interference_power = sum(abs(Heff).^2,2) - signal_power;
+
+
+        SINR = signal_power ./ (interference_power + Pn);
+
+
+        throughput = B * log2(1 + SINR);
+
+
+        throughput_all(:,iter) = throughput;
+
+
+    end
+
+
+    avg_throughput_vs_Pt(p) = mean(throughput_all(:));
+
+
+end
+
+
+figure;
+
+
+plot(Pt_dB_range, avg_throughput_vs_Pt/1e6,'LineWidth',2);
+
+
+grid on;
+
+
+xlabel('Transmit Power (dB)');
+
+
+ylabel('Average Throughput (Mbps)');
+
+
+title('Throughput vs Transmit Power (ZF Massive MIMO)');
